@@ -202,7 +202,7 @@ if __name__ == '__main__':
 
     epochs = 150
     learning_rate = 0.01
-    n_hidden = 500
+    n_hidden = 100
     batch_size = 500
 
     data = load_evergreen()
@@ -217,9 +217,9 @@ if __name__ == '__main__':
 
     train_costs, val_costs = run_training(n_hidden, learning_rate, epochs,
                                           data, model, batch_size,
-                                          show_plot=True)
+                                          show_plot=False)
 
-    write_predictions(model, test_X, test_ids,
-                     'pred_nhid_%s_lr_%s_epochs_%s.txt' % (n_hidden,
-                                                           learning_rate,
-                                                           epochs))
+    # write_predictions(model, test_X, test_ids,
+    #                  'pred_nhid_%s_lr_%s_epochs_%s.txt' % (n_hidden,
+    #                                                        learning_rate,
+    #                                                        epochs))
