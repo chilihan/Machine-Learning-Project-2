@@ -25,12 +25,12 @@ def load_evergreen(dtype=dtype):
     # test set has ids instead of lables
     test_X, test_ids = test_set
 
-    #append the lda topic features
+    # append the lda topic features
     with open('lda_features.pkl') as f:
         train_w, val_w, test_w = pickle.load(f)
-        train_X = np.concatenate((train_X, train_w), axis=1)
-        val_X   = np.concatenate((val_X, val_w), axis=1)
-        test_X  = np.concatenate((test_X, test_w), axis=1)
+    train_X = np.concatenate((train_X, train_w), axis=1)
+    val_X   = np.concatenate((val_X, val_w), axis=1)
+    test_X  = np.concatenate((test_X, test_w), axis=1)
 
     return (train_X.astype(dtype), train_y.astype('int8'),
             val_X.astype(dtype), val_y.astype('int8'),
@@ -104,13 +104,28 @@ def train_model(train_X, train_y, val_X, val_y, W_hid, b_hid, W_out, b_out,
     # Make a list of the weights
     weights = [W_hid, b_hid, W_out, b_out]
 
+    # initialize v
+    V = []
+    for i in range(len(weights)):
+        # print item
+        V.append(np.zeros(weights[i].shape))
+    #momentum
+    mu = 0.9
+
+    #
+    # Vw_hid = np.zeros(W_hid.shape)
+    # Vb_hid = np.zeros(b_hid.shape)
+    # Vw_out = np.zeros(W_out.shape)
+    # Vb_out = np.zeros(b_out.shape)
+    # V = [Vw_hid,Vb_hid,Vw_out,Vb_out]
+
+
     num_batches = train_X.shape[0] / batch_size
 
     mlp_grads = multigrad(mlp_cost, [2, 3, 4, 5])
 
-
     for epoch in xrange(epochs):
-        # print "Epoch", epoch
+        print "Epoch", epoch
 
         for bi in xrange(num_batches):
             grads = mlp_grads(train_X[batch_size*bi:batch_size*(bi+1),:],
@@ -122,19 +137,33 @@ def train_model(train_X, train_y, val_X, val_y, W_hid, b_hid, W_out, b_out,
             if not isinstance(grads[0], np.ndarray):
                 grads = [np.array(g) for g in grads]
 
-
             # update the weights
+            # for i in xrange(len(weights)):
+            #     weights[i] -= learning_rate * grads[i]
+
+            # momentum update
+            # for i in xrange(len(weights)):
+            #     V[i] = mu*V[i]-learning_rate*grads[i]
+            #     weights[i] += V[i]
+
+            # Nesterov accelerated gradient
             for i in xrange(len(weights)):
-                weights[i] -= learning_rate * grads[i]
+                preV = V[i]
+                V[i] = mu*V[i]-learning_rate * grads[i]
+                weights[i] += -mu*preV + (1+mu) *V[i]
+
+
 
         train_cost = mlp_cost(train_X, train_y, *weights)
         val_cost = mlp_cost(val_X, val_y, *weights)
         train_costs[epoch] = train_cost
         val_costs[epoch]   = val_cost
 
-        # print "Training set cost:  ", train_cost
-        # print "Validation set cost:", val_cost
-
+        print "Training set cost:  ", train_cost
+        print "Validation set cost:", val_cost
+    # print("V======", V)
+    # print("this is weight shape====",W_hid.shape)
+    # print("thisis grad======", grads[0].shape)
     return train_costs, val_costs
 
 
@@ -150,22 +179,22 @@ def run_training(n_hidden, learning_rate, epochs, data=None, model=None,
     if model is None:
         model = initialize_model(n_inputs, n_hidden)
     W_hid, b_hid, W_out, b_out = model
-    #
-    # print "Before training"
-    # print 'train accuracy: %6.4f' % \
-    #       accuracy(train_y, mlp_predict(train_X, W_hid, b_hid, W_out, b_out))
-    # print 'train cross entropy: %6.4f' % \
-    #       mlp_cost(train_X, train_y, W_hid, b_hid, W_out, b_out)
-    # print 'validation accuracy: %6.4f' % \
-    #       accuracy(val_y, mlp_predict(val_X, W_hid, b_hid, W_out, b_out))
-    # print 'validation cross entropy: %6.4f' % mlp_cost(val_X, val_y, W_hid,
-    #                                                    b_hid, W_out, b_out)
+
+    print "Before training"
+    print 'train accuracy: %6.4f' % \
+          accuracy(train_y, mlp_predict(train_X, W_hid, b_hid, W_out, b_out))
+    print 'train cross entropy: %6.4f' % \
+          mlp_cost(train_X, train_y, W_hid, b_hid, W_out, b_out)
+    print 'validation accuracy: %6.4f' % \
+          accuracy(val_y, mlp_predict(val_X, W_hid, b_hid, W_out, b_out))
+    print 'validation cross entropy: %6.4f' % mlp_cost(val_X, val_y, W_hid,
+                                                       b_hid, W_out, b_out)
 
     train_costs, val_costs = train_model(train_X, train_y, val_X, val_y,
                                          W_hid, b_hid, W_out, b_out,
                                          learning_rate, epochs, batch_size)
 
-    print "After training, epochs:%s, n_hidden: %s, learning_rate: %s" % (epochs, n_hidden,
+    print "After training, n_hidden: %s, learning_rate: %s" % (n_hidden,
                                                                learning_rate)
     print 'train accuracy: %6.4f' % \
           accuracy(train_y, mlp_predict(train_X, W_hid, b_hid, W_out, b_out))
@@ -203,9 +232,9 @@ def write_predictions(model, test_X, test_ids, outfile):
 
 if __name__ == '__main__':
 
-    epochs = 80
-    learning_rate = 0.03
-    n_hidden = 160
+    epochs = 15
+    learning_rate = 0.015
+    n_hidden = 100
     batch_size = 40
 
     data = load_evergreen()
@@ -222,7 +251,7 @@ if __name__ == '__main__':
                                           data, model, batch_size,
                                           show_plot=True)
 
-    # write_predictions(model, test_X, test_ids,
+    #write_predictions(model, test_X, test_ids,
     #                  'pred_nhid_%s_lr_%s_epochs_%s.txt' % (n_hidden,
     #                                                        learning_rate,
     #                                                        epochs))
